@@ -5,7 +5,6 @@ export default function DeliveryNavbar() {
 
     const handleLogout = () => {
         localStorage.clear();
-        // Usamos navigate o window.location según prefieras
         navigate("/login");
     };
 
