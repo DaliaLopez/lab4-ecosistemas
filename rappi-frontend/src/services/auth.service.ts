@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { CreateUserDTO, AuthenticateUserDTO } from "../types/auth.types";
 
-const API_URL = "http://localhost:1234/api/auth";
+const API_URL = "https://lab3-ecosistemas-backend.vercel.app/api/auth";
 
 export const register = async (userData: CreateUserDTO) => {
     const response = await axios.post(`${API_URL}/register`, userData);
