@@ -1,17 +1,40 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
 import { getProductsByStoreService, getStoresService, createOrderService } from '../../services/consumer.service';
 import type { Product } from '../../types/products.types';
 import type { Store } from '../../types/stores.types';
-import type { CreateOrderDTO } from '../../types/orders.types';
+import type { CreateOrderDTO, LatLng } from '../../types/orders.types';
 
 import ProductCard from '../../components/consumer/ProductCard';
 import CartSidebar from '../../components/consumer/CartSideBar';
 import Navbar from '../../components/consumer/NavBar';
 import axios from 'axios';
 
+const deliveryIcon = L.icon({
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+    iconSize: [35, 35],
+    iconAnchor: [17, 35],
+});
+
 interface CartItem extends Product {
     quantity: number;
+}
+
+function LocationSelector({ onLocationSelect, position }: { onLocationSelect: (pos: LatLng) => void, position: LatLng | null }) {
+    useMapEvents({
+        click(e) {
+            onLocationSelect({
+                latitude: e.latlng.lat,
+                longitude: e.latlng.lng
+            });
+        },
+    });
+
+    return position ? <Marker position={[position.latitude, position.longitude]} icon={deliveryIcon} /> : null;
 }
 
 export default function StoreDetail() {
@@ -22,6 +45,7 @@ export default function StoreDetail() {
     const [cart, setCart] = useState<CartItem[]>([]);
     const [storeName, setStoreName] = useState("");
     const [loading, setLoading] = useState(true);
+    const [destination, setDestination] = useState<LatLng | null>(null);
 
     useEffect(() => {
         if (!id) {
@@ -67,16 +91,25 @@ export default function StoreDetail() {
         const userId = localStorage.getItem('userId');
 
         if (!userId || !id) {
-            alert("Error: Sesión no válida o tienda no encontrada.");
+            alert("Error: Sesión no válida.");
             return;
         }
 
-        const totalVenta = Math.round(cart.reduce((acc, item) => acc + (item.price * item.quantity), 0));
+        if (!destination) {
+            alert("Por favor, selecciona una ubicación de entrega en el mapa.");
+            return;
+        }
+
+        if (cart.length === 0) {
+            alert("El carrito está vacío.");
+            return;
+        }
 
         const orderData: CreateOrderDTO = {
             consumerid: userId,
             storeid: id,
-            total: totalVenta,
+            total: total,
+            destination: destination,
             items: cart.map((item) => ({
                 productid: item.id,
                 quantity: item.quantity,
@@ -92,11 +125,9 @@ export default function StoreDetail() {
             navigate('/my-orders');
         } catch (error: unknown) {
             let errorMessage = "Error interno del servidor (500)";
-
             if (axios.isAxiosError(error) && error.response) {
                 errorMessage = error.response.data.message || errorMessage;
             }
-
             alert(`No se pudo crear el pedido: ${errorMessage}`);
         } finally {
             setLoading(false);
@@ -113,12 +144,32 @@ export default function StoreDetail() {
                 </h2>
 
                 <div className="flex flex-col lg:flex-row gap-8">
-                    <div className="flex-1 space-y-4">
-                        {loading ? (
-                            <p className="text-gray-400 text-sm">Cargando menú...</p>
-                        ) : (
-                            products.map(p => <ProductCard key={p.id} product={p} onAdd={addToCart} />)
-                        )}
+                    <div className="flex-1 space-y-6">
+                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                            <h3 className="text-sm font-bold text-gray-700 mb-3 flex justify-between">
+                                Selecciona el punto de entrega
+                                {destination && <span className="text-green-500 font-normal">📍 Ubicación fijada</span>}
+                            </h3>
+                            <div className="h-64 w-full rounded-xl overflow-hidden border border-gray-200">
+                                <MapContainer 
+                                    center={[3.4516, -76.5320]} 
+                                    zoom={13} 
+                                    style={{ height: '100%', width: '100%' }}
+                                >
+                                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                    <LocationSelector onLocationSelect={setDestination} position={destination} />
+                                </MapContainer>
+                            </div>
+                            <p className="text-[10px] text-gray-400 mt-2 italic">Haz clic en cualquier punto del mapa para definir dónde recibirás tu pedido.</p>
+                        </div>
+
+                        <div className="space-y-4">
+                            {loading ? (
+                                <p className="text-gray-400 text-sm">Cargando menú...</p>
+                            ) : (
+                                products.map(p => <ProductCard key={p.id} product={p} onAdd={addToCart} />)
+                            )}
+                        </div>
                     </div>
 
                     <div className="lg:w-80 w-full">

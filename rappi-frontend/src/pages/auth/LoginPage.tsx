@@ -27,21 +27,20 @@ export default function LoginPage() {
                 navigate('/browse');
             } else if (role === UserRole.STORE) {
                 try {
-                    const response = await axios.get<Store[]>(`https://lab3-ecosistemas-backend.vercel.app/api/stores`, {
+                    const response = await axios.get<Store>(`http://localhost:1234/api/stores/user/${userId}`, {
                         headers: { Authorization: `Bearer ${token}` }
                     });
 
-                    const stores: Store[] = response.data;
-                    const myStore = stores.find((s: Store) => s.userid === userId);
+                    const myStore = response.data;
 
-                    if (myStore) {
+                    if (myStore && myStore.id) {
                         localStorage.setItem('storeId', myStore.id);
+                        navigate('/store/dashboard');
                     }
                 } catch (err) {
                     console.error("Error al obtener tiendas:", err);
                 }
 
-                navigate('/store/dashboard');
             } else if (role === UserRole.DELIVERY) {
                 navigate('/delivery/dashboard');
             } else {
@@ -59,8 +58,8 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-gray-50 to-gray-100 px-4">
 
-            <form 
-                onSubmit={handleLogin} 
+            <form
+                onSubmit={handleLogin}
                 className="bg-white w-full max-w-md p-10 rounded-3xl border border-gray-100 shadow-xl flex flex-col gap-6"
             >
 
@@ -96,9 +95,8 @@ export default function LoginPage() {
                 <button
                     type="submit"
                     disabled={loading}
-                    className={`bg-orange-500 text-white py-4 rounded-xl font-semibold text-sm hover:bg-orange-600 transition-all shadow-md shadow-orange-200 active:scale-95 ${
-                        loading ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
+                    className={`bg-orange-500 text-white py-4 rounded-xl font-semibold text-sm hover:bg-orange-600 transition-all shadow-md shadow-orange-200 active:scale-95 ${loading ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
                 >
                     {loading ? 'Cargando...' : 'Iniciar sesión'}
                 </button>

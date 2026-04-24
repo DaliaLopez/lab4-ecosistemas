@@ -46,3 +46,12 @@ export const getStoreByIdService = async (id: string): Promise<Store> => {
     if (dbRequest.rows.length === 0) throw Boom.notFound("Tienda no encontrada");
     return dbRequest.rows[0];
 };
+
+export const getStoreByUserIdService = async (userId: string): Promise<Store> => {
+    const dbRequest = await pool.query(
+        `SELECT * FROM stores WHERE userid = $1`,
+        [userId]
+    );
+    if (dbRequest.rows.length === 0) throw Boom.notFound("Tienda no encontrada");
+    return dbRequest.rows[0];
+};

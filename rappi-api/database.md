@@ -7,13 +7,17 @@ The following tables must be created in the DB before running the application.
 ```sql
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+CREATE EXTENSION IF NOT EXISTS postgis;
+
 CREATE TABLE users (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     email TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
-    role TEXT NOT NULL
+    role TEXT NOT NULL,
+    password TEXT NOT NULL
 );
 ```
+
 
 ## Users SQL Queries
 
@@ -137,8 +141,10 @@ CREATE TABLE orders (
     consumerId UUID NOT NULL REFERENCES users(id),
     storeId UUID NOT NULL REFERENCES stores(id),
     deliveryId UUID REFERENCES users(id),
-    status TEXT DEFAULT 'pending',
+    status TEXT DEFAULT 'Creado',
     total INTEGER DEFAULT 0,
+    delivery_position GEOGRAPHY(POINT, 4326),
+    destination GEOGRAPHY(POINT, 4326) NOT NULL,
     createdAt TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 ```
@@ -146,19 +152,22 @@ CREATE TABLE orders (
 
 ### createOrder
 ```sql
-INSERT INTO orders (consumerId, storeId, total)
-VALUES ($1, $2, $3)
+INSERT INTO orders (consumerId, storeId, total, destination, status)
+VALUES ($1, $2, $3, ST_SetSRID(ST_MakePoint($4, $5), 4326), 'Creado')
 RETURNING *;
 ```
 
 ### getAvailableOrders
 ```sql
-SELECT * FROM orders WHERE status = 'pending' AND deliveryId IS NULL;
+SELECT *, ST_Y(destination::geometry) as destination_lat, 
+ST_X(destination::geometry) as destination_lng 
+FROM orders 
+WHERE status = 'Creado' AND deliveryId IS NULL;
 ```
 
 ### acceptOrder
 ```sql
-UPDATE orders SET deliveryId = $2, status = 'accepted' WHERE id = $1 RETURNING *;
+UPDATE orders SET deliveryId = $2, status = 'En entrega' WHERE id = $1 RETURNING *;
 ```
 
 ### updateOrderStatus
@@ -169,6 +178,22 @@ UPDATE orders SET status = $2 WHERE id = $1 RETURNING *;
 ### getUserOrders
 ```sql
 SELECT * FROM orders WHERE consumerId = $1 OR deliveryId = $1 ORDER BY createdAt DESC;
+```
+
+### updateOrderPosition
+```sql
+UPDATE orders 
+SET delivery_position = ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
+    status = CASE 
+        WHEN ST_DWithin(
+            ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, 
+            destination, 
+            5
+        ) THEN 'Entregado'
+        ELSE status
+    END
+WHERE id = $3
+RETURNING id, status, ST_Y(delivery_position::geometry) as latitude, ST_X(delivery_position::geometry) as longitude;
 ```
 
 ## Order_items

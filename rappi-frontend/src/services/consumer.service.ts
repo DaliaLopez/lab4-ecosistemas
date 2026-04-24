@@ -1,10 +1,9 @@
 import axios from "axios";
-import type { Order, CreateOrderDTO } from "../types/orders.types"; //
-// Nota: Asegúrate de haber creado estos tipos basados en tu backend
+import type { Order, CreateOrderDTO } from "../types/orders.types";
 import type { Store } from "../types/stores.types"; 
 import type { Product } from "../types/products.types";
 
-const API_URL = "https://lab3-ecosistemas-backend.vercel.app/api"; //
+const API_URL = "http://localhost:1234/api"; //
 
 const getAuthHeaders = () => {
     const token = localStorage.getItem('token');

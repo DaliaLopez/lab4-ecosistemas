@@ -5,6 +5,7 @@ import {
     getAvailableOrdersService,
     getOrdersByStoreService,
     getUserOrdersService,
+    updateOrderPositionService,
     updateOrderStatusService
 } from "./orders.service";
 import {
@@ -16,15 +17,30 @@ import Boom from "@hapi/boom";
 
 
 export const createOrderController = async (req: Request, res: Response) => {
-    const { consumerid, storeid, total, items } = req.body;
+    const { consumerid, storeid, total, items, destination } = req.body;
 
+    if (!items || items.length === 0) {
+        throw Boom.badRequest("Order must contain items");
+    }
+
+    if (!destination || typeof destination.latitude !== "number" || typeof destination.longitude !== "number") {
+        throw Boom.badRequest("Valid destination (latitude and longitude) is required");
+    }
+    
     const order = await createOrderService({
         consumerid,
         storeid,
-        total
+        total,
+        destination
     });
 
+
     for (const item of items) {
+
+        if (!item.productid) {
+            throw Boom.badRequest("Each item must have a valid productid (all lowercase)");
+        }
+        
         await createOrderItemService({
             orderid: order.id,
             productid: item.productid,
@@ -33,9 +49,6 @@ export const createOrderController = async (req: Request, res: Response) => {
         });
     }
 
-    if (!items || items.length === 0) {
-        throw Boom.badRequest("Order must contain items");
-    }
 
     return res.json(order);
 };
@@ -71,6 +84,19 @@ export const updateOrderStatusController = async (req: Request, res: Response) =
         deliveryid
     });
 
+    return res.json(order);
+};
+
+export const updateOrderPositionController = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { latitude, longitude } = req.body;
+
+    if (typeof latitude !== "number" || typeof longitude !== "number") {
+        throw Boom.badRequest("Latitude and longitude must be numbers");
+    }
+
+    const order = await updateOrderPositionService( String(id), {latitude, longitude} );
+    
     return res.json(order);
 };
 

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { getOrdersByStoreService } from "../../services/store.service";
 import { getOrderDetailsService } from "../../services/store.service";
+import { useSupabase } from "../../hooks/useSupabase";
 import axios from "axios";
 import type { Order } from "../../types/orders.types";
 import Navbar from "../../components/store/NavBar";
@@ -12,6 +13,7 @@ interface OrderDetailItem {
 }
 
 export default function StoreDashboard() {
+    const supabase = useSupabase();
     const [orders, setOrders] = useState<Order[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -23,7 +25,7 @@ export default function StoreDashboard() {
 
     const storeId = localStorage.getItem('storeId');
     const token = localStorage.getItem('token');
-    const API_URL = "https://lab3-ecosistemas-backend.vercel.app/api";
+    const API_URL = "http://localhost:1234/api";
 
     const fetchDashboardData = useCallback(async () => {
         if (!storeId) {
@@ -52,6 +54,61 @@ export default function StoreDashboard() {
     useEffect(() => {
         fetchDashboardData();
     }, [fetchDashboardData]);
+
+    useEffect(() => {
+        if (!storeId || !supabase) return;
+
+        const channel = supabase
+            .channel('store-realtime-orders')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'orders',
+                    filter: `storeid=eq.${storeId}`
+                },
+                (payload) => {
+                    const updatedOrder = payload.new as Order;
+
+                    setOrders((currentOrders) =>
+                        currentOrders.map((o) =>
+                            o.id === updatedOrder.id ? { ...o, status: updatedOrder.status } : o
+                        )
+                    );
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [supabase, storeId]);
+
+    useEffect(() => {
+        if (!storeId || !supabase) return;
+
+        const channel = supabase
+            .channel('store-new-orders')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'orders',
+                    filter: `storeid=eq.${storeId}`
+                },
+                (payload) => {
+                    const newOrder = payload.new as Order;
+                    setOrders((currentOrders) => [newOrder, ...currentOrders]);
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [supabase, storeId]);
 
     const handleToggleDetails = async (orderId: string) => {
         if (expandedOrderId === orderId) {

@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback } from "react";
 import { getUserOrdersService, updateOrderStatusService, getOrderDetailsService } from "../../services/delivery.service";
 import type { Order } from "../../types/orders.types";
 import DeliveryNavbar from "../../components/delivery/NavBar";
+import { PositionProvider, usePosition } from "../../providers/PositionProvider";
+import OrderMap from "../../components/OrderMap";
 
 interface OrderItemDetail {
     id: string;
@@ -12,11 +14,30 @@ interface OrderItemDetail {
     name: string;
 }
 
+const ActiveOrderContent = ({ order }: { order: Order }) => {
+    const { myPosition } = usePosition();
+
+    return (
+        <div className="mt-4 animate-in fade-in duration-500">
+            <OrderMap 
+                deliveryPos={myPosition} 
+                destination={{
+                    latitude: (order as any).destination_lat,
+                    longitude: (order as any).destination_lng
+                }} 
+                isInteractive={true} 
+            />
+        </div>
+    );
+};
+
 export default function DeliveryAcceptedOrders() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [selectedOrderItems, setSelectedOrderItems] = useState<OrderItemDetail[] | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [loadingDetails, setLoadingDetails] = useState<boolean>(false);
+
+    const [activeMapId, setActiveMapId] = useState<string | null>(null);
 
     const deliveryId = localStorage.getItem('userId');
 
@@ -28,7 +49,7 @@ export default function DeliveryAcceptedOrders() {
 
             const activeDeliveries = data.filter((o: Order) => {
                 const isMyDelivery = String(o.deliveryid) === String(deliveryId);
-                const isNotFinished = o.status !== 'delivered';
+                const isNotFinished = o.status !== 'Entregado';
                 return isMyDelivery && isNotFinished;
             });
 
@@ -115,19 +136,37 @@ export default function DeliveryAcceptedOrders() {
                                         </h3>
 
                                         <span className="text-xs bg-orange-100 text-orange-500 px-2 py-1 rounded-md font-medium">
-                                            En curso
+                                            {order.status}
                                         </span>
                                     </div>
 
-                                    <button
-                                        onClick={() => viewDetails(order.id)}
-                                        disabled={loadingDetails}
-                                        className="text-sm text-orange-500 hover:underline disabled:opacity-50"
-                                    >
-                                        {loadingDetails ? '...' : 'Ver'}
-                                    </button>
+                                    <div className="flex flex-col gap-2 items-end">
+                                        <button
+                                            onClick={() => viewDetails(order.id)}
+                                            disabled={loadingDetails}
+                                            className="text-sm text-orange-500 hover:underline disabled:opacity-50"
+                                        >
+                                            {loadingDetails ? '...' : 'Ver Productos'}
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveMapId(activeMapId === order.id ? null : order.id)}
+                                            className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${
+                                                activeMapId === order.id 
+                                                ? 'bg-gray-100 text-gray-600' 
+                                                : 'bg-orange-500 text-white shadow-sm'
+                                            }`}
+                                        >
+                                            {activeMapId === order.id ? 'Cerrar Mapa' : 'Navegar / Mapa'}
+                                        </button>
+                                    </div>
 
                                 </div>
+
+                                {activeMapId === order.id && (
+                                    <PositionProvider activeOrder={order}>
+                                        <ActiveOrderContent order={order} />
+                                    </PositionProvider>
+                                )}
 
                                 <button
                                     onClick={() => handleCancel(order.id)}

@@ -3,11 +3,18 @@ import { getUserOrdersService } from "../../services/consumer.service";
 import { getStoreByIdService } from "../../services/store.service";
 import type { Order } from "../../types/orders.types";
 import Navbar from "../../components/consumer/NavBar";
+import { OrderTrackingProvider } from "../../providers/OrderTrackingProvider";
+import { OrderTrackingContent } from "../../components/consumer/OrderTrackingContent";
+
+import { useSupabase } from "../../hooks/useSupabase";
 
 export default function MyOrders() {
+    const supabase = useSupabase();
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [storeNames, setStoreNames] = useState<Record<string, string>>({});
+
+    const [trackingOrder, setTrackingOrder] = useState<Order | null>(null);
 
     const loadOrders = async () => {
         const userId = localStorage.getItem('userId');
@@ -39,11 +46,41 @@ export default function MyOrders() {
         loadOrders();
     }, []);
 
+    useEffect(() => {
+        const userId = localStorage.getItem('userId');
+        if (!userId || !supabase) return;
+
+        const channel = supabase
+            .channel('consumer-realtime-orders')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'orders',
+                    filter: `consumerid=eq.${userId}`
+                },
+                (payload) => {
+                    const updatedOrder = payload.new as Order;
+                    setOrders((currentOrders) =>
+                        currentOrders.map((o) =>
+                            o.id === updatedOrder.id ? { ...o, ...updatedOrder } : o
+                        )
+                    );
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [supabase]);
+
     const getStatusStyle = (status: string) => {
         switch (status.toLowerCase()) {
-            case 'pending': return 'bg-yellow-100 text-yellow-700';
-            case 'accepted': return 'bg-blue-100 text-blue-700';
-            case 'delivered': return 'bg-green-100 text-green-700';
+            case 'Creado': return 'bg-yellow-100 text-yellow-700';
+            case 'En entrega': return 'bg-blue-100 text-blue-700';
+            case 'Entregado': return 'bg-green-100 text-green-700';
             default: return 'bg-gray-100 text-gray-700';
         }
     };
@@ -81,12 +118,55 @@ export default function MyOrders() {
                                             {order.status}
                                         </span>
                                     </div>
+
+                                    {order.status === 'En entrega' && (
+                                        <button
+                                            onClick={() => setTrackingOrder(order)}
+                                            className="mt-4 w-full py-2 bg-orange-500 text-white text-xs font-bold rounded-xl hover:bg-orange-600 transition-all shadow-lg shadow-orange-100"
+                                        >
+                                            Seguir repartidor en vivo
+                                        </button>
+                                    )}
                                 </div>
                             ))
                         )}
                     </div>
                 )}
             </main>
+
+            {trackingOrder && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-gray-900">Rastreo de pedido</h2>
+                            <button
+                                onClick={() => setTrackingOrder(null)}
+                                className="text-gray-400 hover:text-gray-600"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <OrderTrackingProvider>
+                            <OrderTrackingContent
+                                orderId={trackingOrder.id}
+                                destination={{
+                                    latitude: (trackingOrder as any).destination_lat || trackingOrder.destination?.latitude,
+                                    longitude: (trackingOrder as any).destination_lng || trackingOrder.destination?.longitude
+                                }}
+                            />
+                        </OrderTrackingProvider>
+
+                        <button
+                            onClick={() => setTrackingOrder(null)}
+                            className="w-full mt-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition"
+                        >
+                            Cerrar mapa
+                        </button>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }

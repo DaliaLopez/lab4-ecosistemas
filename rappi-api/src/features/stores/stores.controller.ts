@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { createStoreService, getStoreByIdService, getStoresService, updateStoreStatusService } from './stores.service';
+import { createStoreService, getStoreByIdService, getStoreByUserIdService, getStoresService, updateStoreStatusService } from './stores.service';
 import Boom from "@hapi/boom";
 
 export const getStoresController = async (req: Request, res: Response) => {
@@ -31,5 +31,11 @@ export const updateStoreStatusController = async (req: Request, res: Response) =
 export const getStoreByIdController = async (req: Request, res: Response) => {
     const { id } = req.params;
     const store = await getStoreByIdService(String(id));
+    res.status(200).json(store);
+};
+
+export const getStoreByUserIdController = async (req: Request, res: Response) => {
+    const { userId } = req.params;
+    const store = await getStoreByUserIdService(String(userId));
     res.status(200).json(store);
 };

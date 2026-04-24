@@ -10,7 +10,6 @@ export default function DeliveryNavbar() {
 
     return (
         <nav className="bg-white border-b border-gray-200 px-8 py-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
-            {/* Logo y Badge */}
             <h2
                 onClick={() => navigate('/delivery/dashboard')}
                 className="text-xl font-semibold text-orange-500 cursor-pointer flex items-center"
@@ -20,8 +19,6 @@ export default function DeliveryNavbar() {
                     Repartidor
                 </span>
             </h2>
-
-            {/* Enlaces de Navegación */}
             <div className="flex items-center gap-6">
                 <button
                     onClick={() => navigate('/delivery/dashboard')}
@@ -37,7 +34,6 @@ export default function DeliveryNavbar() {
                     Mis Pedidos
                 </button>
 
-                {/* Separador visual opcional */}
                 <div className="h-4 w-px bg-gray-300"></div>
 
                 <button

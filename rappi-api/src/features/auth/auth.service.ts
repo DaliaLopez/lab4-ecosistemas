@@ -50,9 +50,9 @@ export const createUserService = async (
 
   try {
     await pool.query(
-      `INSERT INTO users (id, email, name, role)
-      VALUES ($1, $2, $3, $4)`,
-      [authUser.id, user.email, user.name, user.role]
+      `INSERT INTO users (id, email, name, role, password)
+      VALUES ($1, $2, $3, $4, $5)`,
+      [authUser.id, user.email, user.name, user.role, user.password]
     );
 
     if (user.role === UserRole.STORE) {
