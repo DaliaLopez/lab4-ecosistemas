@@ -7,6 +7,6 @@
     }
   ],
   "rewrites": [
-    { "source": "/(.*)", "destination": "app.ts" }
+    { "source": "/(.*)", "destination": "src/app.ts" }
   ]
 }
