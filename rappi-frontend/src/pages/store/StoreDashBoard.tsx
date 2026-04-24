@@ -25,7 +25,7 @@ export default function StoreDashboard() {
 
     const storeId = localStorage.getItem('storeId');
     const token = localStorage.getItem('token');
-    const API_URL = "http://localhost:1234/api";
+    const API_URL = "https://lab4-ecosistemas-backend.vercel.app/api";
 
     const fetchDashboardData = useCallback(async () => {
         if (!storeId) {

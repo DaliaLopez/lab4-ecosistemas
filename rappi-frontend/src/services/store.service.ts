@@ -2,7 +2,7 @@ import axios from "axios";
 import type { CreateProductDTO } from "../types/products.types";
 import type { Order } from "../types/orders.types";
 
-const API_URL = "http://localhost:1234/api";
+const API_URL = "https://lab4-ecosistemas-backend.vercel.app/api";
 
 const getAuthHeaders = () => ({
     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
