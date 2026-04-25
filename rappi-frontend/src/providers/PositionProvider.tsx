@@ -4,7 +4,7 @@ import { useSupabase } from "../hooks/useSupabase";
 import { type Order, type LatLng, OrderStatus } from "../types/orders.types";
 
 const API_URL = import.meta.env.VITE_API_URL;
-const MOVE_DELTA = 0.0005;
+const MOVE_DELTA = 0.0001;
 
 interface PositionContextType {
   myPosition: LatLng;
