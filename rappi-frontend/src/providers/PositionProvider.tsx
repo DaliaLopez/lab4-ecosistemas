@@ -63,7 +63,7 @@ export const PositionProvider = ({ children, activeOrder }: { children: React.Re
           });
 
           window.alert("¡Has llegado al destino! Pedido entregado.");
-          window.location.href = "/delivery-dashboard"; 
+          window.location.href = "/delivery/dashboard"; 
         }
       }
     } catch (error) {
